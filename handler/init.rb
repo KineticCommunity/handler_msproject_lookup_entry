@@ -1,5 +1,7 @@
 # Require the dependencies file to load the vendor libraries
 require File.expand_path(File.join(File.dirname(__FILE__), 'dependencies'))
+# Require the Office 365 Authentication file
+require File.expand_path(File.join(File.dirname(__FILE__), 'o365_authentication'))
 
 class MsprojectLookupEntryV1
   def initialize(input)
@@ -21,13 +23,8 @@ class MsprojectLookupEntryV1
   end
 
   def execute()
-    resources_path = File.join(File.expand_path(File.dirname(__FILE__)), 'resources')
-
-    # Create the command string that will be used to retrieve the cookies
-    cmd_string = "O365Auth.Console.exe #{@info_values['ms_project_location']} #{@info_values['username']} #{@info_values['password']} #{@info_values['integrated_authentication']}"
-
     # Retrieve the cookies
-    cookies = `cd "#{resources_path}" & #{cmd_string}`
+    cookies = get_office365_cookies(@info_values['ms_project_location'],@info_values['username'],@info_values['password'])
 
     lookup_table = @parameters['lookup_table'].gsub(" ","+")
     lookup_entry = @parameters['lookup_entry'].gsub(" ","+")
@@ -73,7 +70,7 @@ class MsprojectLookupEntryV1
       entry_id = value[0]["Id"]
     end
 
-    puts "The Id of the Lookup Table '#{@parameters['lookup_table']}' is '#{id}'" if @enable_debug_logging
+    puts "The Id of the Lookup Entry '#{@parameters['lookup_entry']}' is '#{entry_id}'" if @enable_debug_logging
 
     puts "Returning results" if @enable_debug_logging
     <<-RESULTS

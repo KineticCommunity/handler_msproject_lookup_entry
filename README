@@ -23,8 +23,3 @@ makes a call to Project to get the id that corresponds to the lookup table name.
 A second call is then made to the specific lookup table to get the id for the
 lookup entry. The id for that entry is then returned. Any errors that occur 
 during this process will be caught and re-raised by the handler.
-
-NOTE: The Microsoft Project handlers uses ADFS authentication 
-(ADFS docs [https://msdn.microsoft.com/en-us/library/bb897402.aspx]) and requires a 
-minimum of .NET 4.0 to be installed on the server that Kinetic Task is running 
-on. If you have any questions about this setup, contact support@kineticdata.com.

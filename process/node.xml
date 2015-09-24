@@ -15,7 +15,6 @@
         <infos>
             <info name="username">&lt;%= @info['username'] %&gt;</info>
             <info name="password">&lt;%= @info['password'] %&gt;</info>
-            <info name="integrated_authentication">&lt;%= @info['integrated_authentication'] %&gt;</info>
             <info name="ms_project_location">&lt;%= @info['ms_project_location'] %&gt;</info>
             <info name="enable_debug_logging">&lt;%= @info['enable_debug_logging'] %&gt;</info>
         </infos>

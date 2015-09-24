@@ -2,8 +2,7 @@
   'info' => {
     'username' => '',
     'password' => '',
-    'integrated_authentication' => 'false',
-    'ms_project_location' => 'https://company.sharepoint.com/sites/pwa/',
+    'ms_project_location' => '',
     'enable_debug_logging' => 'Yes'
   },
   'parameters' => {
