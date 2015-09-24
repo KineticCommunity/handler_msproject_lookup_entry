@@ -64,6 +64,14 @@ SAMLASSERTION
 end
 
 def get_office365_cookies(sp_url, username, password, integrated_auth = false)
+    if sp_url.to_s.empty?
+      raise StandardError, "Invalid Url: '#{sp_url}' is not a valid Office 365 Url."
+    end
+
+    if username.to_s.empty? || password.to_s.empty?
+      raise StandardError, "Invalid Username/Password: Username and/or Password cannot be left blank."
+    end
+
     getAdfsAuthUrl = RestClient.post("https://login.microsoftonline.com/GetUserRealm.srf","handler=1&login=#{username}")
     auth_url = JSON.parse(getAdfsAuthUrl.body)["AuthURL"]
 
@@ -91,7 +99,11 @@ def get_office365_cookies(sp_url, username, password, integrated_auth = false)
         stsUsernameMixedUrl = auth_url.split("/")[0..2].join("/") + "/adfs/services/trust/2005/usernamemixed/"
         saml_body = get_saml_user_pass("urn:federation:MicrosoftOnline", username, password, stsUsernameMixedUrl)
 
-        resp = RestClient.post(stsUsernameMixedUrl, saml_body, :content_type => "application/soap+xml; charset=utf-8")
+        begin
+          resp = RestClient.post(stsUsernameMixedUrl, saml_body, :content_type => "application/soap+xml; charset=utf-8")
+        rescue RestClient::InternalServerError
+          raise StandardError, "Invalid Username/Password: Username/Password combination incorrect. Please check their values and try again."
+        end
         doc = REXML::Document.new(resp.body)
         logon_token = REXML::XPath.first(doc, "/s:Envelope/s:Body/t:RequestSecurityTokenResponse/t:RequestedSecurityToken/saml:Assertion").to_s
         if logon_token != nil
@@ -104,8 +116,16 @@ def get_office365_cookies(sp_url, username, password, integrated_auth = false)
     if body != nil
         resp = RestClient.post("https://login.microsoftonline.com/extSTS.srf", body, :content_type => "application/soap+xml; charset=utf-8")
         doc = REXML::Document.new(resp.body)
-        token[:binaryST] = REXML::XPath.first(doc, "/S:Envelope/S:Body/wst:RequestSecurityTokenResponse/wst:RequestedSecurityToken/wsse:BinarySecurityToken").text
-        token[:expires] = REXML::XPath.first(doc, "/S:Envelope/S:Body/wst:RequestSecurityTokenResponse/wst:Lifetime/wsu:Expires").text
+        binaryST = REXML::XPath.first(doc, "/S:Envelope/S:Body/wst:RequestSecurityTokenResponse/wst:RequestedSecurityToken/wsse:BinarySecurityToken")
+        expires = REXML::XPath.first(doc, "/S:Envelope/S:Body/wst:RequestSecurityTokenResponse/wst:Lifetime/wsu:Expires")
+        if !binaryST.nil?
+          token[:binaryST] = binaryST.text
+          token[:expires] = expires.text
+        end
+    end
+
+    if token[:binaryST].nil?
+      raise StandardError, "The Office 365 Url and Username/Password combination do not match. Please check the Office 365 Url and try again."
     end
 
     ws_signin_url = sp_url.split("/")[0..2].join("/") + "/_forms/default.aspx?wa=wsignin1.0"
@@ -115,6 +135,8 @@ def get_office365_cookies(sp_url, username, password, integrated_auth = false)
         resp = RestClient.post(ws_signin_url, token[:binaryST])
     rescue RestClient::Found => redirect
         cookies = redirect.response.headers[:set_cookie]
+    rescue SocketError => error 
+        raise StandardError, "Invalid Url: The url '#{sp_url}' is not a valid Office 365 Url."
     end
 
     return cookies.join(";")
