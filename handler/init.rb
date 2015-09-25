@@ -37,7 +37,7 @@ class MsprojectLookupEntryV1
     begin
       results = table_endpoint["?$filter=Name+eq+'#{lookup_table}'"].get :accept => 'application/json'
     rescue RestClient::BadRequest => error
-      raise StandardError, error.inspect
+      handle_error(error)
     end
 
     json = JSON.parse(results)
@@ -57,7 +57,7 @@ class MsprojectLookupEntryV1
     begin
       results = entry_endpoint["?$filter=FullValue+eq+'#{lookup_entry}'"].get :accept => 'application/json'
     rescue RestClient::BadRequest => error
-      raise StandardError, error.inspect
+      handle_error(error)
     end
 
     json = JSON.parse(results)
@@ -78,6 +78,40 @@ class MsprojectLookupEntryV1
       <result name="entry_id">#{entry_id}</result>
     </results>
     RESULTS
+  end
+
+  def handle_error(error)
+    error_message = error.inspect
+
+    code = nil
+    value = nil
+    begin
+      json = JSON.parse(error.response.to_s)
+      if !json["odata.error"].nil?
+        if !json["odata.error"]["message"].nil? && !json["odata.error"]["message"]["value"].nil?
+          error_message = json["odata.error"]["message"]["value"].to_s
+          value = json["odata.error"]["message"]["value"]
+        end
+
+        if !json["odata.error"]["code"].nil?
+          if json["odata.error"]["code"].split(",").length > 1
+            if json["odata.error"]["code"].split(",")[1].strip == "Microsoft.SharePoint.Client.ResourceNotFoundException"
+              error_message = "Invalid Project: Can't find a project with an id of '#{@parameters['project_id']}'"
+            else
+              code = json["odata.error"]["code"].split(",")[0].strip
+            end
+          end
+        end
+      end
+    rescue Exception
+      # If the Response data can't be parsed, throw a standard error
+      raise StandardError, error.inspect
+    end
+
+    if code != nil && value != nil
+      error_message = "Error Name: #{value}, Code: #{code}. Too see more details about this error, see Project Server 2013 error codes (https://msdn.microsoft.com/en-us/library/office/ms508961.aspx)."
+    end
+    raise StandardError, error_message
   end
 
   # This is a template method that is used to escape results values (returned in

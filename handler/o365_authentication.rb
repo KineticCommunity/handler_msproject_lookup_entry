@@ -130,7 +130,7 @@ def get_office365_cookies(sp_url, username, password, integrated_auth = false)
 
     ws_signin_url = sp_url.split("/")[0..2].join("/") + "/_forms/default.aspx?wa=wsignin1.0"
     resp = nil
-    cookies = nil
+    cookies = []
     begin
         resp = RestClient.post(ws_signin_url, token[:binaryST])
     rescue RestClient::Found => redirect
